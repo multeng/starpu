@@ -14,10 +14,28 @@
  * See the GNU Lesser General Public License in COPYING.LGPL for more details.
  */
 
+#include <pthread.h>
 #include <starpu.h>
 #include <starpu_profiling.h>
 #include <profiling/profiling.h>
 #include <datawizard/memory_nodes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+/** This code for NNTile **/
+volatile int stop_profiling_thread = 0;
+pthread_t thread_id;
+#define SERVER_IP "127.0.0.1"
+#define SERVER_PORT 5001
+int client_socket = -1;
+/** This code for NNTile **/
 
 static double convert_to_GB(float d)
 {
@@ -217,3 +235,72 @@ void starpu_profiling_worker_helper_display_summary(void)
 		fclose(sfile);
 	}
 }
+
+/** For NNTile **/
+
+void init_client_socket() {
+	printf("init socket client\n");
+  struct sockaddr_in server_address;
+  client_socket = socket(AF_INET, SOCK_STREAM, 0);
+  if (client_socket == -1) {
+      perror("Create socket error");
+  }
+  server_address.sin_family = AF_INET;
+  server_address.sin_port = htons(SERVER_PORT);
+  server_address.sin_addr.s_addr = inet_addr(SERVER_IP);
+
+  if(connect(client_socket, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
+      perror("connect");
+			client_socket = -1;
+  }
+}
+
+void *profiling_thread()
+{
+  int workerid;
+	int worker_cnt = starpu_worker_get_count();
+	printf("WORKER COUNT: %i\n", worker_cnt);
+
+	while (!stop_profiling_thread)
+		{
+		for (workerid = 0; workerid < worker_cnt; workerid++)
+			{
+				struct starpu_profiling_worker_info info;
+				int ret = starpu_profiling_worker_get_info(workerid, &info);
+				char name[64];
+				starpu_worker_get_name(workerid, name, sizeof(name));
+				double total_time = starpu_timing_timespec_to_us(&info.total_time) / 1000.;
+				double flops = 0.0;
+				char message[256];
+				if (info.flops)
+					flops = info.flops;
+					printf("Name: %s, Total time: %f, FLOPS: %f\n", name, total_time, info.flops);
+
+				sprintf(message, "{\"name\": \"%s\", \"total_time\": \"%.2lf\", \"flops\": \"%.2lf\"}\n", name, total_time, flops);
+				if (send(client_socket, message, strlen(message), 0) != (ssize_t)strlen(message)) {
+    			perror("send");
+				}
+			}
+      usleep(500000);
+		}
+  pthread_exit(NULL);
+}
+
+void _starpu_init_custom_profiling()
+{
+	printf("init custom profiling\n");
+	init_client_socket();
+	if(client_socket > 0) {
+		pthread_create(&thread_id, NULL, profiling_thread, NULL);
+	}
+}
+
+void _starpu_stop_custom_profiling(){
+	if (client_socket > 0) {
+		stop_profiling_thread = 1;
+  	pthread_join(thread_id, NULL);
+		close(client_socket);
+  	printf("stop custom profiling\n");
+	}
+}
+/** This code for NNTile **/

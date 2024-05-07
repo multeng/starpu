@@ -28,6 +28,7 @@
 .tramp_history
 *.pc
 *.vim
+.vscode
 stamp-h[0-9]*
 starpu.log
 

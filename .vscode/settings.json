@@ -1,5 +1,17 @@
 {
-    "editor.tabSize": 8,
-    "editor.indentSize": 8,
-    "editor.insertSpaces": false
+  "files.associations": {
+    "__mutex_base": "c",
+    "condition_variable": "c",
+    "mutex": "c",
+    "thread": "c",
+    "version": "c",
+    "__threading_support": "c",
+    "_pthread_types.h": "c",
+    "starpu_profiling.h": "c",
+    "profiling.h": "c",
+    "stdlib.h": "c"
+  },
+  "editor.tabSize": 8,
+  "editor.indentSize": 8,
+  "editor.insertSpaces": false
 }
