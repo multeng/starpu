@@ -84,6 +84,11 @@ void _starpu_profiling_start(void);
 
 void _starpu_profiling_terminate(void);
 
+/** This code for NNTile **/
+void _starpu_init_custom_profiling(void);
+void _starpu_stop_custom_profiling(void);
+/** This code for NNTile **/
+
 #pragma GCC visibility pop
 
 #endif // __PROFILING_H__

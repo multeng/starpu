@@ -1912,6 +1912,10 @@ int starpu_initialize(struct starpu_conf *user_conf, int *argc, char ***argv)
 
 	_starpu_watchdog_init();
 
+	/** This code for NNTile **/
+	_starpu_init_custom_profiling();
+	/** This code for NNTile **/
+
 	_starpu_profiling_start();
 
 	STARPU_PTHREAD_MUTEX_LOCK(&init_mutex);
@@ -2129,6 +2133,9 @@ static void _starpu_kill_all_workers(struct _starpu_machine_config *pconfig)
 	/* running is just protected by a memory barrier */
 	ANNOTATE_HAPPENS_BEFORE(&_starpu_config.running);
 	STARPU_WMB();
+	/** This code for NNTile **/
+	_starpu_stop_custom_profiling();
+	/** This code for NNTile **/
 	starpu_wake_all_blocked_workers();
 }
 
